@@ -6,7 +6,7 @@ import (
 	lumberjack "gopkg.in/natefinch/lumberjack.v2"
 )
 
-var logger *zap.Logger
+var Logger *zap.Logger
 
 const (
 	LOG_MAX_SIZE = 10
@@ -17,7 +17,7 @@ func InitLogger(file string, level string) {
 	writeSyncer := getLogWriter(file)
 	encoder := getEncoder()
 	core := zapcore.NewCore(encoder, writeSyncer, getLevel(level))
-	logger = zap.New(core, zap.AddCaller())
+	Logger = zap.New(core, zap.AddCaller())
 }
 
 func getLogWriter(file string) zapcore.WriteSyncer {

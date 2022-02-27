@@ -12,15 +12,16 @@ import (
 	"github.com/x-junkang/connected/internal/clog"
 	"github.com/x-junkang/connected/internal/configure"
 	"github.com/x-junkang/connected/internal/protocol"
+	"github.com/x-junkang/connected/pkg/ciface"
 	"go.uber.org/zap"
 )
 
 type ConnectionTCP struct {
 	sync.RWMutex
-	TCPServer *Server
+	TCPServer ciface.IServer
 	Conn      *net.TCPConn
 	//当前连接的ID 也可以称作为SessionID，ID全局唯一
-	ConnID uint32
+	ConnID uint64
 
 	ExitChan chan struct{}
 
@@ -35,7 +36,7 @@ type ConnectionTCP struct {
 	isClosed bool
 }
 
-func NewConnectionTcp(server *Server, conn *net.TCPConn, connID uint32) *ConnectionTCP {
+func NewConnectionTcp(server *Server, conn *net.TCPConn, connID uint64) *ConnectionTCP {
 	c := &ConnectionTCP{
 		TCPServer: server,
 		Conn:      conn,
@@ -43,9 +44,10 @@ func NewConnectionTcp(server *Server, conn *net.TCPConn, connID uint32) *Connect
 		isClosed:  false,
 		ExitChan:  make(chan struct{}),
 		// MsgHandler:  msgHandler,
-		msgBuffChan: make(chan []byte, configure.GlobalObject.MaxMsgChanLen),
-		MaxBodySize: 500,
-		property:    nil,
+		msgBuffChan:       make(chan []byte, configure.GlobalObject.MaxMsgChanLen),
+		MaxBodySize:       500,
+		HeartbeatInterval: 3 * time.Second,
+		property:          nil,
 	}
 	return c
 }
@@ -65,6 +67,42 @@ func (ct *ConnectionTCP) Stop() {
 	close(ct.ExitChan)
 }
 
+func (ct *ConnectionTCP) GetTCPConnection() *net.TCPConn {
+	return ct.Conn
+}
+
+func (ct *ConnectionTCP) GetConnID() uint64 {
+	return ct.ConnID
+}
+func (ct *ConnectionTCP) RemoteAddr() net.Addr {
+	return ct.Conn.RemoteAddr()
+}
+func (ct *ConnectionTCP) SendMsg(msgID, data []byte) error {
+	return nil
+}
+func (ct *ConnectionTCP) SendBuffMsg(msgID, data []byte) error {
+	return nil
+}
+func (ct *ConnectionTCP) SetProperty(key string, value interface{}) {
+	ct.propertyLock.Lock()
+	defer ct.propertyLock.Unlock()
+	ct.property[key] = value
+}
+func (ct *ConnectionTCP) GetProperty(key string) interface{} {
+	ct.propertyLock.Lock()
+	defer ct.propertyLock.Unlock()
+	if v, ok := ct.property[key]; ok {
+		return v
+	}
+	return nil
+}
+
+func (ct *ConnectionTCP) RemoveProperty(key string) {
+	ct.propertyLock.Lock()
+	defer ct.propertyLock.Unlock()
+	delete(ct.property, key)
+}
+
 func (ct *ConnectionTCP) startReader() {
 	fmt.Println("[Reader Goroutine is running]")
 	defer fmt.Println(ct.Conn.RemoteAddr().String(), "[conn Reader exit!]")
@@ -77,17 +115,18 @@ func (ct *ConnectionTCP) startReader() {
 		}
 		header, err := ct.readHeader()
 		if err != nil {
-			clog.Error("read header fail", zap.String("err", err.Error()))
+			clog.Logger.Error("read header fail", zap.String("err", err.Error()))
 			return
 		}
 		data, err := ct.readBody(header.BodyLength)
 		if err != nil {
-			clog.Error("read body fail", zap.String("err", err.Error()))
+			clog.Logger.Error("read body fail", zap.String("err", err.Error()))
 			return
 		}
 		//todo handle data
 		fmt.Println(string(data))
 		ct.msgBuffChan <- data
+
 	}
 }
 
@@ -100,7 +139,7 @@ func (ct *ConnectionTCP) startWriter() {
 			if ok {
 				//有数据要写给客户端
 				header := &protocol.MarsHeader{
-					BodyLength: int32(len(data)),
+					BodyLength: uint32(len(data)),
 				}
 				if _, err := ct.write(header, data); err != nil {
 					fmt.Println("Send Buff Data error:, ", err, " Conn Writer exit")
@@ -119,7 +158,7 @@ func (ct *ConnectionTCP) startWriter() {
 func (ct *ConnectionTCP) readHeader() (*protocol.MarsHeader, error) {
 	var header protocol.MarsHeader
 
-	// ct.Conn.SetReadDeadline(time.Now().Add(ct.HeartbeatInterval * 2))
+	ct.Conn.SetReadDeadline(time.Now().Add(ct.HeartbeatInterval * 2))
 
 	err := binary.Read(ct.Conn, binary.BigEndian, &header)
 	if err != nil {
@@ -141,11 +180,11 @@ func (ct *ConnectionTCP) readHeader() (*protocol.MarsHeader, error) {
 	return &header, nil
 }
 
-func (ct *ConnectionTCP) readBody(len int32) ([]byte, error) {
+func (ct *ConnectionTCP) readBody(len uint32) ([]byte, error) {
 	body := make([]byte, len)
 	_, err := io.ReadFull(ct.Conn, body)
 	if err != nil {
-		clog.Error("read msg data fail", zap.String("err", err.Error()))
+		clog.Logger.Error("read msg data fail", zap.String("err", err.Error()))
 	}
 	return body, err
 }

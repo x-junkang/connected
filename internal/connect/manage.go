@@ -10,14 +10,14 @@ import (
 
 //ConnManager 连接管理模块
 type ConnManager struct {
-	connections map[uint32]ciface.IConnection
+	connections map[uint64]ciface.IConnection
 	connLock    sync.RWMutex
 }
 
 //NewConnManager 创建一个链接管理
 func NewConnManager() *ConnManager {
 	return &ConnManager{
-		connections: make(map[uint32]ciface.IConnection),
+		connections: make(map[uint64]ciface.IConnection),
 	}
 }
 
@@ -43,7 +43,7 @@ func (connMgr *ConnManager) Remove(conn ciface.IConnection) {
 }
 
 //Get 利用ConnID获取链接
-func (connMgr *ConnManager) Get(connID uint32) (ciface.IConnection, error) {
+func (connMgr *ConnManager) Get(connID uint64) (ciface.IConnection, error) {
 	connMgr.connLock.RLock()
 	defer connMgr.connLock.RUnlock()
 
@@ -79,7 +79,7 @@ func (connMgr *ConnManager) ClearConn() {
 }
 
 //ClearOneConn  利用ConnID获取一个链接 并且删除
-func (connMgr *ConnManager) ClearOneConn(connID uint32) {
+func (connMgr *ConnManager) ClearOneConn(connID uint64) {
 	connMgr.connLock.Lock()
 	defer connMgr.connLock.Unlock()
 
@@ -94,5 +94,4 @@ func (connMgr *ConnManager) ClearOneConn(connID uint32) {
 	}
 
 	fmt.Println("Clear Connections ID:  ", connID, "err")
-	return
 }

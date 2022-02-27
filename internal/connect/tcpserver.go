@@ -28,6 +28,7 @@ type Server struct {
 	//该Server的连接断开时的Hook函数
 	OnConnStop func(conn ciface.IConnection)
 
+	CID uint64
 	// packet ziface.Packet
 }
 
@@ -55,16 +56,16 @@ func NewServer(opts ...Option) *Server {
 func (s *Server) Start() {
 	addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 	if err != nil {
-		clog.Fatal("addr is error", zap.String("errsmg", err.Error()))
+		clog.Logger.Fatal("addr is error", zap.String("errsmg", err.Error()))
 	}
 	listener, err := net.ListenTCP(s.IPVersion, addr)
 	if err != nil {
-		clog.Fatal("bind port fail", zap.String("errmsg", err.Error()))
+		clog.Logger.Fatal("bind port fail", zap.String("errmsg", err.Error()))
 	}
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
-			clog.Error("create new conn fail", zap.String("errmsg", err.Error()))
+			clog.Logger.Error("create new conn fail", zap.String("errmsg", err.Error()))
 		}
 		go s.handler(conn)
 	}
@@ -72,6 +73,37 @@ func (s *Server) Start() {
 
 func (s *Server) handler(tcpConn *net.TCPConn) {
 	fmt.Println("hello client")
-	conn := NewConnectionTcp(s, tcpConn, 1)
+	conn := NewConnectionTcp(s, tcpConn, s.CID)
 	conn.Start()
+	s.CID++
+}
+
+func (s *Server) Stop() {
+	s.ConnMgr.ClearConn()
+	clog.Logger.Info("server stopped")
+}
+
+func (s *Server) AddRouter(msgID uint32, router ciface.IRouter) {
+	s.msgHandler.AddRouter(msgID, router)
+}
+
+func (s *Server) GetConnMgr() ciface.IConnManager {
+	return nil
+}
+
+func (s *Server) SetOnConnStart(fn func(ciface.IConnection)) {
+
+}
+func (s *Server) SetOnConnStop(fn func(ciface.IConnection)) {
+
+}
+
+func (s *Server) CallOnConnStart(conn ciface.IConnection) {
+
+}
+func (s *Server) CallOnConnStop(conn ciface.IConnection) {
+
+}
+func (s *Server) Packet() ciface.Packet {
+	return nil
 }
