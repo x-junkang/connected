@@ -23,12 +23,12 @@ func main() {
 	}
 	data := []byte{'h', 'e', 'l', 'l', 'o'}
 	for {
-		binary.Write(conn, binary.BigEndian, header)
-		binary.Write(conn, binary.BigEndian, data)
+		binary.Write(conn, binary.LittleEndian, header)
+		binary.Write(conn, binary.LittleEndian, data)
 
 		fmt.Println("done 1")
 		var respHead protocol.MarsHeader
-		err = binary.Read(conn, binary.BigEndian, &respHead)
+		err = binary.Read(conn, binary.LittleEndian, &respHead)
 		if err != nil {
 			return
 		}

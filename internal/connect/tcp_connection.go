@@ -107,24 +107,36 @@ func (ct *ConnectionTCP) startReader() {
 	fmt.Println("[Reader Goroutine is running]")
 	defer fmt.Println(ct.Conn.RemoteAddr().String(), "[conn Reader exit!]")
 	defer ct.Stop()
+
+	var err error
+
 	for {
 		select {
 		case <-ct.ExitChan:
 			return
 		default:
 		}
-		header, err := ct.readHeader()
+		msg := protocol.NewMarsMsg()
+		msg.MarsHeader, err = ct.readHeader()
 		if err != nil {
 			clog.Logger.Error("read header fail", zap.String("err", err.Error()))
 			return
 		}
-		data, err := ct.readBody(header.BodyLength)
+		if msg.GetHeaderLen() > 20 {
+			opt, err := ct.readBytes(msg.GetHeaderLen() - 20)
+			if err != nil {
+				return
+			}
+			msg.Opt = opt
+		}
+		data, err := ct.readBytes(msg.GetDataLen())
 		if err != nil {
 			clog.Logger.Error("read body fail", zap.String("err", err.Error()))
 			return
 		}
+		msg.SetData(data)
 		//todo handle data
-		fmt.Println(string(data))
+		fmt.Printf("msg = %s", string(msg.Data))
 		ct.msgBuffChan <- data
 
 	}
@@ -160,7 +172,7 @@ func (ct *ConnectionTCP) readHeader() (*protocol.MarsHeader, error) {
 
 	ct.Conn.SetReadDeadline(time.Now().Add(ct.HeartbeatInterval * 2))
 
-	err := binary.Read(ct.Conn, binary.BigEndian, &header)
+	err := binary.Read(ct.Conn, binary.LittleEndian, &header)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +192,7 @@ func (ct *ConnectionTCP) readHeader() (*protocol.MarsHeader, error) {
 	return &header, nil
 }
 
-func (ct *ConnectionTCP) readBody(len uint32) ([]byte, error) {
+func (ct *ConnectionTCP) readBytes(len uint32) ([]byte, error) {
 	body := make([]byte, len)
 	_, err := io.ReadFull(ct.Conn, body)
 	if err != nil {
@@ -190,7 +202,7 @@ func (ct *ConnectionTCP) readBody(len uint32) ([]byte, error) {
 }
 
 func (ct *ConnectionTCP) write(header *protocol.MarsHeader, data []byte) (int, error) {
-	err := binary.Write(ct.Conn, binary.BigEndian, header)
+	err := binary.Write(ct.Conn, binary.LittleEndian, header)
 	if err != nil {
 		return protocol.MarsHeaderLength, err
 	}

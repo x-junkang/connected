@@ -6,6 +6,7 @@ import (
 
 	"github.com/x-junkang/connected/internal/clog"
 	"github.com/x-junkang/connected/internal/configure"
+	"github.com/x-junkang/connected/internal/protocol"
 	"github.com/x-junkang/connected/pkg/ciface"
 	"go.uber.org/zap"
 )
@@ -28,8 +29,8 @@ type Server struct {
 	//该Server的连接断开时的Hook函数
 	OnConnStop func(conn ciface.IConnection)
 
-	CID uint64
-	// packet ziface.Packet
+	CID    uint64
+	packet ciface.Packet
 }
 
 type Option func(s interface{})
@@ -43,7 +44,7 @@ func NewServer(opts ...Option) *Server {
 		Port:      configure.GlobalObject.TCPPort,
 		// msgHandler: NewMsgHandle(),
 		// ConnMgr:    NewConnManager(),
-		// packet:     NewDataPack(),
+		packet: protocol.NewDataPack(),
 	}
 
 	for _, opt := range opts {
@@ -105,5 +106,5 @@ func (s *Server) CallOnConnStop(conn ciface.IConnection) {
 
 }
 func (s *Server) Packet() ciface.Packet {
-	return nil
+	return s.packet
 }
