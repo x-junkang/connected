@@ -23,7 +23,8 @@ type ConnectionTCP struct {
 	//当前连接的ID 也可以称作为SessionID，ID全局唯一
 	ConnID uint64
 
-	ExitChan chan struct{}
+	MsgHandler ciface.IMsgHandle
+	ExitChan   chan struct{}
 
 	msgBuffChan       chan []byte
 	HeartbeatInterval time.Duration
@@ -36,14 +37,14 @@ type ConnectionTCP struct {
 	isClosed bool
 }
 
-func NewConnectionTcp(server *Server, conn *net.TCPConn, connID uint64) *ConnectionTCP {
+func NewConnectionTcp(server *Server, conn *net.TCPConn, connID uint64, msgHandler ciface.IMsgHandle) *ConnectionTCP {
 	c := &ConnectionTCP{
-		TCPServer: server,
-		Conn:      conn,
-		ConnID:    connID,
-		isClosed:  false,
-		ExitChan:  make(chan struct{}),
-		// MsgHandler:  msgHandler,
+		TCPServer:         server,
+		Conn:              conn,
+		ConnID:            connID,
+		isClosed:          false,
+		ExitChan:          make(chan struct{}),
+		MsgHandler:        msgHandler,
 		msgBuffChan:       make(chan []byte, configure.GlobalObject.MaxMsgChanLen),
 		MaxBodySize:       500,
 		HeartbeatInterval: 3 * time.Second,
@@ -77,10 +78,12 @@ func (ct *ConnectionTCP) GetConnID() uint64 {
 func (ct *ConnectionTCP) RemoteAddr() net.Addr {
 	return ct.Conn.RemoteAddr()
 }
-func (ct *ConnectionTCP) SendMsg(msgID, data []byte) error {
+func (ct *ConnectionTCP) SendMsg(msgID uint32, data []byte) error {
+	// 需要完善
+	ct.msgBuffChan <- data
 	return nil
 }
-func (ct *ConnectionTCP) SendBuffMsg(msgID, data []byte) error {
+func (ct *ConnectionTCP) SendBuffMsg(msgID uint32, data []byte) error {
 	return nil
 }
 func (ct *ConnectionTCP) SetProperty(key string, value interface{}) {
@@ -88,13 +91,13 @@ func (ct *ConnectionTCP) SetProperty(key string, value interface{}) {
 	defer ct.propertyLock.Unlock()
 	ct.property[key] = value
 }
-func (ct *ConnectionTCP) GetProperty(key string) interface{} {
+func (ct *ConnectionTCP) GetProperty(key string) (interface{}, error) {
 	ct.propertyLock.Lock()
 	defer ct.propertyLock.Unlock()
 	if v, ok := ct.property[key]; ok {
-		return v
+		return v, nil
 	}
-	return nil
+	return nil, errors.New("key does not exit")
 }
 
 func (ct *ConnectionTCP) RemoveProperty(key string) {
@@ -136,8 +139,14 @@ func (ct *ConnectionTCP) startReader() {
 		}
 		msg.SetData(data)
 		//todo handle data
-		fmt.Printf("msg = %s", string(msg.Data))
-		ct.msgBuffChan <- data
+		fmt.Printf("msg = %s\n", string(msg.Data))
+
+		req := &Request{
+			conn: ct,
+			msg:  msg,
+		}
+		ct.MsgHandler.DoMsgHandler(req)
+		// ct.msgBuffChan <- data
 
 	}
 }

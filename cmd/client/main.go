@@ -19,6 +19,7 @@ func main() {
 	}
 	header := &protocol.MarsHeader{
 		HeaderLength: 20,
+		Sequence:     1,
 		BodyLength:   5,
 	}
 	data := []byte{'h', 'e', 'l', 'l', 'o'}

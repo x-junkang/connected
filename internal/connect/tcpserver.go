@@ -38,11 +38,11 @@ type Option func(s interface{})
 //NewServer 创建一个服务器句柄
 func NewServer(opts ...Option) *Server {
 	s := &Server{
-		Name:      configure.GlobalObject.Name,
-		IPVersion: "tcp4",
-		IP:        configure.GlobalObject.Host,
-		Port:      configure.GlobalObject.TCPPort,
-		// msgHandler: NewMsgHandle(),
+		Name:       configure.GlobalObject.Name,
+		IPVersion:  "tcp4",
+		IP:         configure.GlobalObject.Host,
+		Port:       configure.GlobalObject.TCPPort,
+		msgHandler: NewTcpHandler(),
 		// ConnMgr:    NewConnManager(),
 		packet: protocol.NewDataPack(),
 	}
@@ -74,7 +74,7 @@ func (s *Server) Start() {
 
 func (s *Server) handler(tcpConn *net.TCPConn) {
 	fmt.Println("hello client")
-	conn := NewConnectionTcp(s, tcpConn, s.CID)
+	conn := NewConnectionTcp(s, tcpConn, s.CID, s.msgHandler)
 	conn.Start()
 	s.CID++
 }

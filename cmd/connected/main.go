@@ -11,5 +11,7 @@ func init() {
 
 func main() {
 	server := connect.NewServer()
+	server.AddRouter(1, &connect.HelloRouter{})
+	server.AddRouter(2, &connect.SendMsgRouter{})
 	server.Start()
 }
