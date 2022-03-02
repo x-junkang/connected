@@ -37,7 +37,7 @@ type ConnectionTCP struct {
 	isClosed bool
 }
 
-func NewConnectionTcp(server *Server, conn *net.TCPConn, connID uint64, msgHandler ciface.IMsgHandle) *ConnectionTCP {
+func NewConnectionTcp(server ciface.IServer, conn *net.TCPConn, connID uint64, msgHandler ciface.IMsgHandle) *ConnectionTCP {
 	c := &ConnectionTCP{
 		TCPServer:         server,
 		Conn:              conn,
@@ -57,7 +57,7 @@ func (ct *ConnectionTCP) Start() {
 	go ct.startReader()
 	go ct.startWriter()
 	//todo 将该连接加入全局map管理
-	// ct.TCPServer.ConnMgr.Add(ct)
+	ct.TCPServer.GetConnMgr().Add(ct)
 }
 
 func (ct *ConnectionTCP) Stop() {
@@ -65,6 +65,7 @@ func (ct *ConnectionTCP) Stop() {
 		return
 	}
 	ct.isClosed = true
+	ct.TCPServer.GetConnMgr().Remove(ct)
 	close(ct.ExitChan)
 }
 

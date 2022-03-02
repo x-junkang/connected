@@ -9,3 +9,5 @@
 2022-03-01T21:04:26.665+0800	ERROR	connect/tcp_connection.go:122	read header fail	{"err": "EOF"}
 2022-03-01T21:25:19.733+0800	ERROR	connect/tcp_connection.go:125	read header fail	{"err": "EOF"}
 2022-03-01T21:25:37.349+0800	ERROR	connect/tcp_connection.go:125	read header fail	{"err": "EOF"}
+2022-03-02T22:12:22.228+0800	ERROR	connect/tcp_connection.go:126	read header fail	{"err": "EOF"}
+2022-03-02T22:12:31.784+0800	ERROR	connect/tcp_connection.go:126	read header fail	{"err": "EOF"}
