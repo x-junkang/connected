@@ -1,10 +1,8 @@
 package connect
 
 import (
-	"encoding/json"
 	"fmt"
 	"net"
-	"net/http"
 
 	"github.com/x-junkang/connected/internal/clog"
 	"github.com/x-junkang/connected/internal/configure"
@@ -56,28 +54,7 @@ func NewServer(opts ...Option) *Server {
 	return s
 }
 
-type AllConnResp struct {
-	Count int `json:"len"`
-}
-
-func (s *Server) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
-	data := AllConnResp{
-		Count: s.GetConnMgr().Len(),
-	}
-	respData, err := json.Marshal(data)
-	if err != nil {
-		clog.Logger.Error("json marshal fail", zap.String("err", err.Error()))
-		return
-	}
-	resp.Write(respData)
-}
-
 func (s *Server) Start() {
-
-	go func() {
-		http.Handle("/all", s)
-		http.ListenAndServe(":8080", nil)
-	}()
 
 	addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 	if err != nil {
