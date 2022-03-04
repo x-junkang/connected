@@ -1,8 +1,7 @@
 package connect
 
 import (
-	"fmt"
-
+	"github.com/rs/zerolog/log"
 	"github.com/x-junkang/connected/pkg/ciface"
 )
 
@@ -26,7 +25,7 @@ type HelloRouter struct {
 func (router *HelloRouter) Handle(req ciface.IRequest) {
 	msgID := req.GetMsgID()
 	data := req.GetData()
-	fmt.Println("handler msg 1")
+	log.Info().Msg("handler msg 1")
 	req.GetConnection().SendMsg(msgID, data)
 }
 
@@ -37,6 +36,6 @@ type SendMsgRouter struct {
 func (router *SendMsgRouter) Handle(req ciface.IRequest) {
 	msgID := req.GetMsgID()
 	data := req.GetData()
-	fmt.Println("handler msg 2")
+	log.Info().Msg("handler msg 2")
 	req.GetConnection().SendMsg(msgID, data)
 }

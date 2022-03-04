@@ -2,9 +2,9 @@ package connect
 
 import (
 	"errors"
-	"fmt"
 	"sync"
 
+	"github.com/rs/zerolog/log"
 	"github.com/x-junkang/connected/pkg/ciface"
 )
 
@@ -29,7 +29,7 @@ func (connMgr *ConnManager) Add(conn ciface.IConnection) {
 	connMgr.connections[conn.GetConnID()] = conn
 	connMgr.connLock.Unlock()
 
-	fmt.Println("connection add to ConnManager successfully: conn num = ", connMgr.Len())
+	log.Info().Int("conns num", connMgr.Len()).Msg("connection add to ConnManager successfully")
 }
 
 //Remove 删除连接
@@ -39,7 +39,7 @@ func (connMgr *ConnManager) Remove(conn ciface.IConnection) {
 	//删除连接信息
 	delete(connMgr.connections, conn.GetConnID())
 	connMgr.connLock.Unlock()
-	fmt.Println("connection Remove ConnID=", conn.GetConnID(), " successfully: conn num = ", connMgr.Len())
+	log.Info().Uint64("connID", conn.GetConnID()).Int("conns num", connMgr.Len()).Msg("remove connID successfully")
 }
 
 //Get 利用ConnID获取链接
@@ -75,7 +75,7 @@ func (connMgr *ConnManager) ClearConn() {
 		delete(connMgr.connections, connID)
 	}
 	connMgr.connLock.Unlock()
-	fmt.Println("Clear All Connections successfully: conn num = ", connMgr.Len())
+	log.Info().Int("conns num", connMgr.Len()).Msg("clear all connections successfully")
 }
 
 //ClearOneConn  利用ConnID获取一个链接 并且删除
@@ -89,9 +89,8 @@ func (connMgr *ConnManager) ClearOneConn(connID uint64) {
 		conn.Stop()
 		//删除
 		delete(connections, connID)
-		fmt.Println("Clear Connections ID:  ", connID, "succeed")
+		log.Info().Uint64("connID", connID).Msg("clear connection succeed")
 		return
 	}
-
-	fmt.Println("Clear Connections ID:  ", connID, "err")
+	log.Error().Uint64("connID", connID).Msg("clear connection fail")
 }

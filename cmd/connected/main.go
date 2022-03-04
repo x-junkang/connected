@@ -1,17 +1,29 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 
+	"github.com/rs/zerolog/log"
 	"github.com/x-junkang/connected/internal/clog"
+	"github.com/x-junkang/connected/internal/config"
 	"github.com/x-junkang/connected/internal/connect"
 	"github.com/x-junkang/connected/internal/httphandler"
 	"github.com/x-junkang/connected/pkg/ciface"
 )
 
 func init() {
-	clog.InitLogger("./connect.log", "debug")
+	logConf := clog.Config{
+		ConsoleLoggingEnabled: true,
+		EncodeLogsAsJson:      true,
+		FileLoggingEnabled:    true,
+		Directory:             config.GlobalObject.LogDir,
+		Filename:              config.GlobalObject.LogFile,
+		MaxSize:               5,
+		MaxBackups:            10,
+		MaxAge:                7,
+		Level:                 config.GlobalObject.LogLevel,
+	}
+	clog.Configure(logConf)
 }
 
 type Service struct {
@@ -35,7 +47,7 @@ func (s *Service) Start() {
 	go func() {
 		http.ListenAndServe(":8080", httphandler.NewHttpServer(s.server))
 	}()
-	fmt.Println("server start!")
+	log.Info().Msg("server start!")
 	select {}
 }
 

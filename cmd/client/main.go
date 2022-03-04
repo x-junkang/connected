@@ -7,12 +7,12 @@ import (
 	"net"
 	"time"
 
-	"github.com/x-junkang/connected/internal/configure"
+	"github.com/x-junkang/connected/internal/config"
 	"github.com/x-junkang/connected/internal/protocol"
 )
 
 func main() {
-	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", configure.GlobalObject.Host, configure.GlobalObject.TCPPort))
+	conn, err := net.Dial("tcp", fmt.Sprintf("%s:%d", config.GlobalObject.Host, config.GlobalObject.TCPPort))
 	if err != nil {
 		fmt.Println("连接出错")
 		return

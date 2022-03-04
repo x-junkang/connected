@@ -5,7 +5,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/x-junkang/connected/internal/configure"
+	"github.com/x-junkang/connected/internal/config"
 	"github.com/x-junkang/connected/pkg/ciface"
 )
 
@@ -54,7 +54,7 @@ func (dp *DataPack) Unpack(binaryData []byte) (ciface.IMessage, error) {
 	}
 
 	//判断dataLen的长度是否超出我们允许的最大包长度
-	if configure.GlobalObject.MaxPacketSize > 0 && msg.BodyLength > configure.GlobalObject.MaxPacketSize {
+	if config.GlobalObject.MaxPacketSize > 0 && msg.BodyLength > config.GlobalObject.MaxPacketSize {
 		return nil, errors.New("too large msg data received")
 	}
 

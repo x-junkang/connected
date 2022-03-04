@@ -4,9 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/x-junkang/connected/internal/clog"
+	"github.com/rs/zerolog/log"
 	"github.com/x-junkang/connected/pkg/ciface"
-	"go.uber.org/zap"
 )
 
 type HttpServer struct {
@@ -34,7 +33,7 @@ func (s *HttpServer) router() {
 		}
 		respData, err := json.Marshal(data)
 		if err != nil {
-			clog.Logger.Error("json marshal fail", zap.String("err", err.Error()))
+			log.Err(err).Msg("json marshal fail")
 			return
 		}
 		rw.Write(respData)

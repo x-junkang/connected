@@ -1,0 +1,13 @@
+{
+    "name":"connected",
+    "version":"v1.0.0",
+    "tcp_port":8090,
+    "http_port":8080,
+    "max_conn":12000,
+    "max_packet_size":4096,
+    "conf_file_path":"./conf/connected.json",
+    "max_msg_chan_len":1024,
+    "log_dir":"./log",
+    "log_file":"connected.log",
+    "log_level":"info"
+}

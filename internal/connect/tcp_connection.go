@@ -3,17 +3,15 @@ package connect
 import (
 	"encoding/binary"
 	"errors"
-	"fmt"
 	"io"
 	"net"
 	"sync"
 	"time"
 
-	"github.com/x-junkang/connected/internal/clog"
-	"github.com/x-junkang/connected/internal/configure"
+	"github.com/rs/zerolog/log"
+	"github.com/x-junkang/connected/internal/config"
 	"github.com/x-junkang/connected/internal/protocol"
 	"github.com/x-junkang/connected/pkg/ciface"
-	"go.uber.org/zap"
 )
 
 type ConnectionTCP struct {
@@ -45,7 +43,7 @@ func NewConnectionTcp(server ciface.IServer, conn *net.TCPConn, connID uint64, m
 		isClosed:          false,
 		ExitChan:          make(chan struct{}),
 		MsgHandler:        msgHandler,
-		msgBuffChan:       make(chan []byte, configure.GlobalObject.MaxMsgChanLen),
+		msgBuffChan:       make(chan []byte, config.GlobalObject.MaxMsgChanLen),
 		MaxBodySize:       500,
 		HeartbeatInterval: 3 * time.Second,
 		property:          nil,
@@ -108,8 +106,8 @@ func (ct *ConnectionTCP) RemoveProperty(key string) {
 }
 
 func (ct *ConnectionTCP) startReader() {
-	fmt.Println("[Reader Goroutine is running]")
-	defer fmt.Println(ct.Conn.RemoteAddr().String(), "[conn Reader exit!]")
+	log.Info().Msg("[reader goroutine is running]")
+	defer log.Info().Uint64("connID", ct.ConnID).Msg("[conn reader exit!]")
 	defer ct.Stop()
 
 	var err error
@@ -122,8 +120,11 @@ func (ct *ConnectionTCP) startReader() {
 		}
 		msg := protocol.NewMarsMsg()
 		msg.MarsHeader, err = ct.readHeader()
+		if err == io.EOF {
+			return
+		}
 		if err != nil {
-			clog.Logger.Error("read header fail", zap.String("err", err.Error()))
+			log.Err(err).Msg("read header fail")
 			return
 		}
 		if msg.GetHeaderLen() > 20 {
@@ -135,12 +136,12 @@ func (ct *ConnectionTCP) startReader() {
 		}
 		data, err := ct.readBytes(msg.GetDataLen())
 		if err != nil {
-			clog.Logger.Error("read body fail", zap.String("err", err.Error()))
+			log.Err(err).Msg("read body fail")
 			return
 		}
 		msg.SetData(data)
 		//todo handle data
-		fmt.Printf("msg = %s\n", string(msg.Data))
+		log.Info().Msgf("msg = %s", string(msg.Data))
 
 		req := &Request{
 			conn: ct,
@@ -153,8 +154,8 @@ func (ct *ConnectionTCP) startReader() {
 }
 
 func (ct *ConnectionTCP) startWriter() {
-	fmt.Println("[Writer Goroutine is running]")
-	defer fmt.Println(ct.Conn.RemoteAddr().String(), "[conn Writer exit!]")
+	log.Info().Msg("[writer goroutine is running]")
+	defer log.Info().Uint64("connID", ct.ConnID).Msg("[conn writer exit!]")
 	for {
 		select {
 		case data, ok := <-ct.msgBuffChan:
@@ -164,11 +165,11 @@ func (ct *ConnectionTCP) startWriter() {
 					BodyLength: uint32(len(data)),
 				}
 				if _, err := ct.write(header, data); err != nil {
-					fmt.Println("Send Buff Data error:, ", err, " Conn Writer exit")
+					log.Warn().Err(err).Msg("conn writer exit")
 					return
 				}
 			} else {
-				fmt.Println("msgBuffChan is Closed")
+				log.Info().Msg("msgBuffChan is closed")
 				return
 			}
 		case <-ct.ExitChan:
@@ -206,7 +207,7 @@ func (ct *ConnectionTCP) readBytes(len uint32) ([]byte, error) {
 	body := make([]byte, len)
 	_, err := io.ReadFull(ct.Conn, body)
 	if err != nil {
-		clog.Logger.Error("read msg data fail", zap.String("err", err.Error()))
+		log.Err(err).Msg("read msg data fail")
 	}
 	return body, err
 }

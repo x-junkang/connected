@@ -4,11 +4,10 @@ import (
 	"fmt"
 	"net"
 
-	"github.com/x-junkang/connected/internal/clog"
-	"github.com/x-junkang/connected/internal/configure"
+	"github.com/rs/zerolog/log"
+	"github.com/x-junkang/connected/internal/config"
 	"github.com/x-junkang/connected/internal/protocol"
 	"github.com/x-junkang/connected/pkg/ciface"
-	"go.uber.org/zap"
 )
 
 type Server struct {
@@ -38,10 +37,10 @@ type Option func(s interface{})
 //NewServer 创建一个服务器句柄
 func NewServer(opts ...Option) *Server {
 	s := &Server{
-		Name:       configure.GlobalObject.Name,
+		Name:       config.GlobalObject.Name,
 		IPVersion:  "tcp4",
-		IP:         configure.GlobalObject.Host,
-		Port:       configure.GlobalObject.TCPPort,
+		IP:         config.GlobalObject.Host,
+		Port:       config.GlobalObject.TCPPort,
 		msgHandler: NewTcpHandler(),
 		ConnMgr:    NewConnManager(),
 		packet:     protocol.NewDataPack(),
@@ -58,16 +57,16 @@ func (s *Server) Start() {
 
 	addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 	if err != nil {
-		clog.Logger.Fatal("addr is error", zap.String("errsmg", err.Error()))
+		log.Err(err).Msg("addr is error")
 	}
 	listener, err := net.ListenTCP(s.IPVersion, addr)
 	if err != nil {
-		clog.Logger.Fatal("bind port fail", zap.String("errmsg", err.Error()))
+		log.Err(err).Msg("bind port fail")
 	}
 	for {
 		conn, err := listener.AcceptTCP()
 		if err != nil {
-			clog.Logger.Error("create new conn fail", zap.String("errmsg", err.Error()))
+			log.Err(err).Msg("create new conn fail")
 		}
 		go s.handler(conn)
 	}
@@ -82,7 +81,7 @@ func (s *Server) handler(tcpConn *net.TCPConn) {
 
 func (s *Server) Stop() {
 	s.ConnMgr.ClearConn()
-	clog.Logger.Info("server stopped")
+	log.Info().Str("name", s.Name).Msg("server stopped")
 }
 
 func (s *Server) AddRouter(msgID uint32, router ciface.IRouter) {

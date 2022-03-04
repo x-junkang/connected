@@ -1,7 +1,0 @@
-2022-03-01T10:40:39.416+0800	INFO	clog/log.go:10	hello msg
-2022-03-01T10:45:24.808+0800	INFO	clog/logger.go:14	hello msg
-2022-03-01T10:49:27.863+0800	INFO	clog/logger.go:14	hello msg
-2022-03-01T10:54:59.837+0800	INFO	clog/logger.go:14	hello msg
-2022-03-01T11:03:45.845+0800	INFO	logger/logger.go:53	hello msg
-2022-03-01T11:04:36.686+0800	INFO	logger/logger.go:53	hello msg
-2022-03-01T11:04:36.687+0800	INFO	logger/logger.go:53	hello msg2
