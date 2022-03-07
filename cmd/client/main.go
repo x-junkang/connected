@@ -33,7 +33,7 @@ func main() {
 		if err != nil {
 			return
 		}
-		bodyLen := int(header.BodyLength)
+		bodyLen := int(respHead.BodyLength)
 		resp := make([]byte, bodyLen)
 		n, err := io.ReadFull(conn, resp)
 		if err != nil {

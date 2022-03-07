@@ -27,7 +27,16 @@ func (s *HttpServer) ServeHTTP(resp http.ResponseWriter, req *http.Request) {
 }
 
 func (s *HttpServer) router() {
-	s.HandleFunc("/all", func(rw http.ResponseWriter, r *http.Request) {
+	s.HandleFunc("/all", s.GetNumOfConns())
+	s.HandleFunc("/send", s.SendMsg())
+}
+
+type AllConnResp struct {
+	Count int `json:"len"`
+}
+
+func (s *HttpServer) GetNumOfConns() func(rw http.ResponseWriter, r *http.Request) {
+	return func(rw http.ResponseWriter, r *http.Request) {
 		data := AllConnResp{
 			Count: s.tcpserver.GetConnMgr().Len(),
 		}
@@ -37,9 +46,5 @@ func (s *HttpServer) router() {
 			return
 		}
 		rw.Write(respData)
-	})
-}
-
-type AllConnResp struct {
-	Count int `json:"len"`
+	}
 }

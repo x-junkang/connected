@@ -162,7 +162,8 @@ func (ct *ConnectionTCP) startWriter() {
 			if ok {
 				//有数据要写给客户端
 				header := &protocol.MarsHeader{
-					BodyLength: uint32(len(data)),
+					HeaderLength: 20,
+					BodyLength:   uint32(len(data)),
 				}
 				if _, err := ct.write(header, data); err != nil {
 					log.Warn().Err(err).Msg("conn writer exit")
