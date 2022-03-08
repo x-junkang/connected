@@ -54,7 +54,6 @@ func NewServer(opts ...Option) *Server {
 }
 
 func (s *Server) Start() {
-
 	addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 	if err != nil {
 		log.Err(err).Msg("addr is error")
@@ -73,7 +72,6 @@ func (s *Server) Start() {
 }
 
 func (s *Server) handler(tcpConn *net.TCPConn) {
-	fmt.Println("hello client")
 	conn := NewConnectionTcp(s, tcpConn, s.CID, s.msgHandler)
 	conn.Start()
 	s.CID++
@@ -93,17 +91,23 @@ func (s *Server) GetConnMgr() ciface.IConnManager {
 }
 
 func (s *Server) SetOnConnStart(fn func(ciface.IConnection)) {
-
+	s.OnConnStart = fn
 }
 func (s *Server) SetOnConnStop(fn func(ciface.IConnection)) {
-
+	s.OnConnStop = fn
 }
 
 func (s *Server) CallOnConnStart(conn ciface.IConnection) {
-
+	if s.OnConnStart == nil {
+		return
+	}
+	s.OnConnStart(conn)
 }
 func (s *Server) CallOnConnStop(conn ciface.IConnection) {
-
+	if s.OnConnStop == nil {
+		return
+	}
+	s.OnConnStop(conn)
 }
 func (s *Server) Packet() ciface.Packet {
 	return s.packet

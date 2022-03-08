@@ -84,6 +84,4 @@ func (g *GlobalObj) Reload() {
 		panic(err)
 	}
 	fmt.Println(g)
-
-	//Logger 设置
 }

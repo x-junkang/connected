@@ -106,11 +106,9 @@ func (ct *ConnectionTCP) RemoveProperty(key string) {
 }
 
 func (ct *ConnectionTCP) startReader() {
-	log.Info().Msg("[reader goroutine is running]")
+	log.Info().Uint64("connID", ct.ConnID).Msg("[reader goroutine is running]")
 	defer log.Info().Uint64("connID", ct.ConnID).Msg("[conn reader exit!]")
 	defer ct.Stop()
-
-	var err error
 
 	for {
 		select {
@@ -118,29 +116,14 @@ func (ct *ConnectionTCP) startReader() {
 			return
 		default:
 		}
-		msg := protocol.NewMarsMsg()
-		msg.MarsHeader, err = ct.readHeader()
+		msg, err := ct.read()
 		if err == io.EOF {
 			return
 		}
 		if err != nil {
-			log.Err(err).Msg("read header fail")
+			log.Err(err).Msg("read data fail")
 			return
 		}
-		if msg.GetHeaderLen() > 20 {
-			opt, err := ct.readBytes(msg.GetHeaderLen() - 20)
-			if err != nil {
-				return
-			}
-			msg.Opt = opt
-		}
-		data, err := ct.readBytes(msg.GetDataLen())
-		if err != nil {
-			log.Err(err).Msg("read body fail")
-			return
-		}
-		msg.SetData(data)
-		//todo handle data
 		log.Info().Msgf("msg = %s", string(msg.Data))
 
 		req := &Request{
@@ -148,24 +131,20 @@ func (ct *ConnectionTCP) startReader() {
 			msg:  msg,
 		}
 		ct.MsgHandler.DoMsgHandler(req)
-		// ct.msgBuffChan <- data
-
 	}
 }
 
 func (ct *ConnectionTCP) startWriter() {
-	log.Info().Msg("[writer goroutine is running]")
+	log.Info().Uint64("connID", ct.ConnID).Msg("[writer goroutine is running]")
 	defer log.Info().Uint64("connID", ct.ConnID).Msg("[conn writer exit!]")
 	for {
 		select {
 		case data, ok := <-ct.msgBuffChan:
 			if ok {
 				//有数据要写给客户端
-				header := &protocol.MarsHeader{
-					HeaderLength: 20,
-					BodyLength:   uint32(len(data)),
-				}
-				if _, err := ct.write(header, data); err != nil {
+				msg := protocol.NewMarsMsg()
+				msg.SetData(data)
+				if _, err := ct.write(msg); err != nil {
 					log.Warn().Err(err).Msg("conn writer exit")
 					return
 				}
@@ -213,11 +192,46 @@ func (ct *ConnectionTCP) readBytes(len uint32) ([]byte, error) {
 	return body, err
 }
 
-func (ct *ConnectionTCP) write(header *protocol.MarsHeader, data []byte) (int, error) {
-	err := binary.Write(ct.Conn, binary.LittleEndian, header)
+func (ct *ConnectionTCP) read() (msg *protocol.MarsMsg, err error) {
+	msg = protocol.NewMarsMsg()
+	msg.MarsHeader, err = ct.readHeader()
+	if err == io.EOF {
+		return nil, io.EOF
+	}
+	if err != nil {
+		// log.Err(err).Msg("read header fail")
+		return nil, err
+	}
+	if msg.GetHeaderLen() > protocol.MarsHeaderLength {
+		opt, err := ct.readBytes(msg.GetHeaderLen() - 20)
+		if err != nil {
+			return nil, err
+		}
+		msg.Opt = opt
+	}
+	data, err := ct.readBytes(msg.GetDataLen())
+	if err == io.EOF {
+		return nil, io.EOF
+	}
+	if err != nil {
+		// log.Err(err).Msg("read body fail")
+		return nil, err
+	}
+	msg.SetData(data)
+	return msg, nil
+}
+
+func (ct *ConnectionTCP) write(msg *protocol.MarsMsg) (int, error) {
+	err := binary.Write(ct.Conn, binary.LittleEndian, msg.MarsHeader)
 	if err != nil {
 		return protocol.MarsHeaderLength, err
 	}
-	n, err := ct.Conn.Write(data)
-	return n + protocol.MarsHeaderLength, err
+	if msg.HeaderLength > protocol.MarsHeaderLength {
+		_, err := ct.Conn.Write(msg.Opt)
+		if err != nil {
+			return int(msg.HeaderLength), err
+		}
+	}
+	n, err := ct.Conn.Write(msg.Data)
+	return n + int(msg.GetHeaderLen()), err
 }

@@ -1,6 +1,8 @@
 package connect
 
-import "github.com/x-junkang/connected/pkg/ciface"
+import (
+	"github.com/x-junkang/connected/pkg/ciface"
+)
 
 type TcpHandler struct {
 	Apis map[uint32]ciface.IRouter
@@ -25,4 +27,8 @@ func (handler *TcpHandler) DoMsgHandler(req ciface.IRequest) {
 
 func (handler *TcpHandler) AddRouter(msgID uint32, router ciface.IRouter) {
 	handler.Apis[msgID] = router
+}
+
+func (handler *TcpHandler) AddRangeRouter(fn ciface.RangeRouterFn, router ciface.IRouter) {
+
 }
